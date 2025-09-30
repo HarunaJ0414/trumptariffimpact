@@ -1,0 +1,159 @@
+---
+title: "The Short-Term Impact of Trump’s 2025 Tariff on Stock Markets in Tariff-Targeted Country vs. The U.S."
+author: "Haruna Jukurogi"
+output: pdf_document
+---
+
+# Description for The Design
+After President Trump announced that he is going to increase the tariff on U.S. imports on April 2nd, 2025, the market was drove into chaos. He called it 'Liberation Day,' imposing at least 10% tax on products imported to the U.S. from every country in the world. For some countries, he announced that he will impose a much higher tariff, such as 145% on imports from China. Although he announced 90-day pause on the tariff for countries which were going to be hit by the tariff on April 9th, 2025, the exception was China, which he decided to impose 145% as he announced on April 2nd. 
+
+In this study, I am looking into the short term effect of the tariff that the Trump Administration has enacted on the stock prices in China and the U.S.The goal is to determine whether the U.S. stock market and China’s stock market reacted differently in the week following the official tariff announcement on April 2, 2025.
+
+
+I am conducting this study to understand how investors respond to trade policy events as it is vital for evaluating market efficiency, risk pricing, and cross-border investment dynamics. Conducting this research not only deepens our understanding of short-term market reactions to policy shocks but also helps inform risk management strategies for global investors and policymakers.
+
+The market data I am using in this factorial experiment is SPDR S&P 500 ETF Trust (SPY) from the U.S. and iShares China Large-Cap ETF (FXI) from China. This is because I am studying the effects the tariff had on to a country, not to individual companies and these these two ETFs represent each country's market situation, which will help me observe the effect the tariff had on each country. 
+
+I will compare the 1-week return on each market index before and after the tariff announcement to observe the short-term effect of the tariff, and since he already mentioned he will announce the tariff in early March, I am using data from February to ensure that he mentioned about the tariff is not reflected in the pre-tariff prices.
+
+I will use the closing prices from February 12th, 2025 to February 19th, 2025 for pre-tariff announcement prices, and April 2nd, 2025 to April 9th, 2025. 
+
+This is 2x2 full factorial design with ETF (0: SPY, 1: FXI) and Period (0: Pre-Tariff, 1: Post-Tariff).
+
+
+# Analysis of The Data
+I used the package "quantmod" in order to access the financial data from yahoo finance, and the package "kabbleExtra" to convert a data frame into a table.
+
+```{r, echo = FALSE, message = FALSE, warning=FALSE}
+# import the package, quantmod, in order to import financial data from the yahoo finance
+
+install.packages("quantmod")
+install.packages("kableExtra")
+library(quantmod)
+library(kableExtra)
+library(ggplot2)
+
+
+```
+
+First, I obtained the prices of SPY and FXI in the period of Febraury 12th, 2025 to April 10th, 2025, which includes the dates I desired to look into, which are February 12th and 19th, and April 2nd and 9th. After I obtained the data, I collected the closing price of each day on SPY and FXI with which prices I calculated the returns in a week between February 12th to 19th, 2025 and April 2nd to 9th, 2025. 
+
+```{r, echo = FALSE}
+
+# get SPY and FXI data between February 12th, 2025 to April 10th, 2025 from yahoo finance
+spy <- getSymbols("SPY", from = "2025-02-12", to = "2025-04-10", src='yahoo', auto.assign = FALSE)
+fxi <- getSymbols("FXI", from = "2025-02-12", to = "2025-04-10", src='yahoo', auto.assign = FALSE)
+
+# obtain the prices on February 12th and 19th, and April 2nd and 9th, and compute the returns 
+
+spy_pre_buy <- as.numeric(spy["2025-02-12", "SPY.Close"])
+spy_pre_sell <- as.numeric(spy["2025-02-19", "SPY.Close"])
+
+spy_pre_return <- (spy_pre_sell - spy_pre_buy) / spy_pre_buy * 100
+
+spy_post_buy <- as.numeric(spy["2025-04-02", "SPY.Close"])
+spy_post_sell <- as.numeric(spy["2025-04-09", "SPY.Close"])
+
+spy_post_return <- (spy_post_sell - spy_post_buy) / spy_post_buy * 100
+
+fxi_pre_buy <- as.numeric(fxi["2025-02-12", "FXI.Close"])
+fxi_pre_sell <- as.numeric(fxi["2025-02-19", "FXI.Close"])
+
+fxi_pre_return <- (fxi_pre_sell - fxi_pre_buy) / fxi_pre_buy * 100
+
+fxi_post_buy <- as.numeric(fxi["2025-04-02", "FXI.Close"])
+fxi_post_sell <- as.numeric(fxi["2025-04-09", "FXI.Close"])
+
+fxi_post_return <- (fxi_post_sell - fxi_post_buy) / fxi_post_buy * 100
+
+```
+
+The below is the table of the returns on SPY and FXI before and after the tariff announcement. As you can see from the table, the return in a week were positive before the tariff and went negative after the tariff announcement. 
+
+```{r, echo = FALSE}
+# create a table of returns on each ETF
+
+df <- data.frame(
+  Tariff=c("Non-Tariffed(US)", "Non-Tariffed(US)", "Tariffed", "Tariffed"),
+  Period=c("Pre-Tariff", "Post-Tariff", "Pre-Tariff", "Post-Tariff"),
+  ETF=c("SPY", "SPY", "FXI", "FXI"),
+  Return=c(spy_pre_return, spy_post_return, fxi_pre_return, fxi_post_return)
+)
+
+kable(df, row.names = F) %>%
+     column_spec (1:4, border_left = T, border_right = T) %>% 
+     kable_styling()
+
+```
+
+To formally assess the effect of the tariff announcement on market performance, I fitted a linear regression model using a 2×2 factorial design, with tariff (Tariffed vs. Non-Tariffed) and Period (Pre-Tariff vs. Post-Tariff) as explanatory variables. The outcome variable was the 1-week return (%) for each market index.
+The model was specified as:
+$$Return =\beta_0+\beta_1(Period)+\beta_2(ETF)+\beta_3(Period*ETF)$$
+where the base case is Period = Pre-Tariff and ETF = SPY. 
+As this is a full factorial design with no replication, the model fits the data exactly, and ANOVA F-tests are not meaningful. Instead, I will interpret the direction and magnitude of effects.
+
+The U.S. market (SPY) returned +1.59% pre-tariff, but dropped to -2.81% post-tariff, which is a small decline, and the Chinese market (FXI) returned +0.60% pre-tariff, but plunged to -12.84% post-tariff. Also, the large negative interaction effect (-9.03%) suggests that tariff-targeted market (China) reacted much more negatively than non-targeted one (US).
+
+```{r, echo=FALSE}
+
+df$Period <- factor(df$Period)
+df$ETF <- factor(df$ETF)
+
+df$ETF <- relevel(df$ETF, ref = "SPY")
+df$Period <- relevel(df$Period, ref = "Pre-Tariff")
+
+model <- lm(Return ~ Period * ETF, data=df)
+summary(model)
+
+coef_table <- data.frame(
+  Term = c("(Intercept)", "Period (Pre-Tariff)", "ETF (SPY)", "Interaction (Pre-Tariff × SPY)"),
+  Estimate = round(coef(model), 3)
+)
+
+kable(coef_table, caption = "Linear Model Estimates")
+```
+
+
+Also, I created an interaction plot using ggplot2, showing that the Chinese stock market reacted sharply compared to the U.S. stock market.
+
+```{r, echo=FALSE, message=FALSE}
+ggplot(df, aes(x = Period, y = Return, group = ETF, color = ETF)) +
+  geom_line(linewidth = 1.2) +
+  geom_point(size = 3) +
+  labs(
+    title = "Market Return by Tariff Exposure and Period",
+    y = "1-Week Return (%)",
+    x = "Period"
+  ) +
+  theme_minimal() +
+  theme(
+    text = element_text(size = 12),
+    plot.title = element_text(face = "bold", hjust = 0.5)
+  )
+```
+
+Also, I created an interaction plot using ggplot2, showing that the Chinese stock market reacted sharply compared to the U.S. stock market.
+
+# Conclusion
+One key limitation of this study is the lack of replication. This is because only one observation was available per treatment combination and this restricts the ability to perform meaningful statistical inference such as hypothesis testing using ANOVA. Instead, our conclusions are based on observed trends and estimated effects.
+
+Also, given that the market is driven by a lot more information, we should not conclude that the tariff actually led to the lower ETF prices and we require comprehensive data to isolate single trade policy. I used the ETFs of each country to capture the effect on the whole country, but it is also benefitial to look into different sectors of industry to understand the trend it has when it comes to reacting new trade policy.
+
+Despite these limitations, the study offers a useful snapshot of how financial markets in China (tariff-targeted) and the U.S. (tariff-non-targeted) countries reacted to a real-world policy shock.
+
+This factorial experiment suggest that the 2025 Trump tariff announcement caused more significant decrease in Chinese stock market (FXI) than the U.S. stock market (SPY).
+
+While SPY dropped by 4.4 percent after the tariff announcement, FXI dipped by more than 14 percent, suggesting that even though both countries' stock market was affected by the announcement, China was hit by it disproportionately, indicating the asymmetric response to the policy change. This supports the idea that trade policy shocks can induce rapid investor reactions and short-term financial volatility, especially in directly affected countries.
+
+
+
+# References
+BBC Visual Journalism team.(2025, April 2). See the Trump tariffs list by country. BBC. https://www.bbc.com/news/articles/c5ypxnnyg7jo
+
+Grolemund, G. (2014, July 16). Introduction to R Markdown. R Markdown from RStudio. https://rmarkdown.rstudio.com/articles_intro.html
+
+kcin999. (2023, April 1). Introduction to Yahoo Finance in R. RPubs by RStudio. https://rpubs.com/kcin999/yahoo-finance
+
+Reuter T. (2025, April 11). China hits back at Trump's tariff hike with 125 duties on U.S. goods. CBC. https://www.cbc.ca/news/world/china-tariffs-us-trump-1.7507719
+
+
